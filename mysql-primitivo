@@ -96,7 +96,7 @@ spec:
                   key: mysql-password
           args:
             - "--default-authentication-plugin=mysql_native_password"
-            - "--provisioner=dmaster.senasa.gob.ar/nfs"
+            - "--provisioner=kmaster.senasa.gob.ar/nfs"
           imagePullPolicy: "IfNotPresent"
           volumeMounts:
             - name:  export-volume
