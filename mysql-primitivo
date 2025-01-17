@@ -108,7 +108,7 @@ spec:
       volumes:
             - name: export-volume
               persistentVolumeClaim:
-                 claimName: mysql-pv-claim
+                 claimName: nfs-mysql-claim
             - name: mysql-files
               hostPath:
                  path: /var/lib/mysql-files
