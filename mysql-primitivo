@@ -137,19 +137,6 @@ metadata:
   namespace: webapp
   name: nfs-mysql-claim
 spec:
-  storageClassName: scmysql
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 500Gi
----
-
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: nfs-pvc
-spec:
   accessModes:
     - ReadWriteOnce
   resources:
