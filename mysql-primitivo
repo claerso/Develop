@@ -142,7 +142,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: scmysql
+  storageClassName: nfs-client
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -255,7 +255,7 @@ metadata:
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: scmysql
-provisioner: kmaster.senasa.gob.ar/nfs"/nfs
+  name: nfs-client
+provisioner: kmaster.senasa.gob.ar/nfs
 parameters:
   archiveOnDelete: "false"
