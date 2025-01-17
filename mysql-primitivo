@@ -142,7 +142,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: nfs-client
+  storageClassName: scmysql
 ---
 apiVersion: v1
 kind: PersistentVolume
