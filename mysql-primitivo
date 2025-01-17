@@ -142,7 +142,7 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 50Gi
+      storage: 500Gi
 ---
 
 apiVersion: v1
@@ -159,7 +159,7 @@ spec:
   accessModes:
     - ReadWriteMany
   nfs:
-    path: /vol_NA_PDR_K8s_WAP/mysql
+    path: /vol_NA_PDR_K8s_WAP
     server: 10.0.48.251
     readOnly: false
 ---
@@ -256,9 +256,7 @@ metadata:
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-    name: scmysql
-    provisioner: k8s.gcr.io/sig-storage/nfs-subdir-external-provisioner
-    parameters:
-      server: 10.0.48.251
-      path: /vol_NA_PDR_K8s_WAP/mysql
-      readOnly: false
+  name: scmysql
+provisioner: kmaster.senasa.gob.ar/nfs"/nfs
+parameters:
+  archiveOnDelete: "false"
