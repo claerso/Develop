@@ -1,0 +1,262 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: webapp
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      serviceAccountName: mysql-nfs
+      containers:
+        - name: mysql
+          image: mysql:8.0.23
+          ports:
+            - name: nfs
+              containerPort: 2049
+            - name: nfs-udp
+              containerPort: 2049
+              protocol: UDP
+            - name: nlockmgr
+              containerPort: 32803
+            - name: nlockmgr-udp
+              containerPort: 32803
+              protocol: UDP
+            - name: mountd
+              containerPort: 20048
+            - name: mountd-udp
+              containerPort: 20048
+              protocol: UDP
+            - name: rquotad
+              containerPort: 875
+            - name: rquotad-udp
+              containerPort: 875
+              protocol: UDP
+            - name: rpcbind
+              containerPort: 111
+            - name: rpcbind-udp
+              containerPort: 111
+              protocol: UDP
+            - name: statd
+              containerPort: 662
+            - name: statd-udp
+              containerPort: 662
+              protocol: UDP
+            - name: mysql-ports
+              containerPort: 3306
+              protocol: TCP
+          securityContext:
+            capabilities:
+              add:
+                - DAC_READ_SEARCH
+                - SYS_RESOURCE
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP        
+            - name: SERVICE_NAME
+              value: nfs-provisioner
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: DB_HOST
+              valueFrom:
+               secretKeyRef:
+                 name: mysql-secrets
+                 key: iphost          
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: root_password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: database            
+            - name: MYSQL_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: mysql-password
+          args:
+            - "--default-authentication-plugin=mysql_native_password"
+            - "--provisioner=dmaster.senasa.gob.ar/nfs"
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name:  export-volume
+              mountPath: /var/lib/mysql
+            - name: mysql-files
+              mountPath: /var/lib/mysql-files
+            - name:  mysql-configmap
+              mountPath: /etc/mysql
+      volumes:
+            - name: export-volume
+              persistentVolumeClaim:
+                 claimName: mysql-pv-claim
+            - name: mysql-files
+              hostPath:
+                 path: /var/lib/mysql-files
+                 type: DirectoryOrCreate     
+            - name: mysql-configmap
+              configMap:
+                 name: mysql-configmap    
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secrets
+  namespace: webapp
+type: Opaque
+data:
+    # echo -n "my-super-secret-password" | base64
+    iphost: MTAuMC40OC4yNTA=
+    root_password: czB0MW1pY2E=
+    database: bnViZQ==
+    mysql-user: cm9vdA==
+    mysql-password: Y2wwdWRzM24=
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: webapp
+  name: nfs-mysql-claim
+spec:
+  storageClassName: scmysql
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Gi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+  namespace: webapp
+  labels:
+    type: local
+spec:
+  storageClassName: scmysql
+  capacity:
+    storage: 500Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+     path: /var/lib/mysql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+spec:
+  selector:
+    app.kubernetes.io/name: mysql
+  ports:
+      - name: mysql-port
+        protocol: TCP
+        port: 3306
+        targetPort: 3306
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: nfs-provisioner
+  labels:
+    app: mysql
+spec:
+  ports:
+    - name: nfs
+      port: 2049
+    - name: nfs-udp
+      port: 2049
+      protocol: UDP
+    - name: nlockmgr
+      port: 32803
+    - name: nlockmgr-udp
+      port: 32803
+      protocol: UDP
+    - name: mountd
+      port: 20048
+    - name: mountd-udp
+      port: 20048
+      protocol: UDP
+    - name: rquotad
+      port: 875
+    - name: rquotad-udp
+      port: 875
+      protocol: UDP
+    - name: rpcbind
+      port: 111
+    - name: rpcbind-udp
+      port: 111
+      protocol: UDP
+    - name: statd
+      port: 662
+    - name: statd-udp
+      port: 662
+      protocol: UDP
+  selector:
+    app: mysql
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-configmap
+  namespace: webapp
+data:
+  my.cnf: |
+
+    [mysqld]
+    user = mysql
+    pid-file = /var/run/mysqld/mysqld.pid
+    socket = /var/run/mysqld/mysqld.sock
+    port = 3306
+    datadir = /var/lib/mysql
+    key_buffer_size = 16M
+    max_allowed_packet = 1024M
+    thread_stack = 256K
+    myisam-recover-options = BACKUP
+    max_connections = 151
+    table_open_cache = 4000
+    innodb_buffer_pool_size = 12G
+    innodb_log_file_size = 3G
+    innodb_log_files_in_group = 2
+    join_buffer_size = 512M
+    innodb_buffer_pool_instances = 12
+    skip-name-resolve = 1
+    innodb_file_per_table = ON
+    log_error = /var/lib/mysql/error.log
+    general_log_file = /var/lib/mysql/query.log
+    general_log = 1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mysql-nfs
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    description: Storage Class Database
+  name: scmysql
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
