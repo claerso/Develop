@@ -142,24 +142,26 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 500Gi
+      storage: 50Gi
 ---
+
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: mysql-pv
+  name: mysql-pv-volume
   namespace: webapp
   labels:
     type: local
 spec:
-  storageClassName: scmysql
+  storageClassName: manual
   capacity:
-    storage: 500Gi
-  volumeMode: Filesystem
+    storage: 20Gi
   accessModes:
     - ReadWriteMany
-  hostPath:
-     path: /var/lib/mysql
+  nfs:
+    path: /vol_NA_PDR_K8s_WAP/mysql
+    server: 10.0.48.251
+    readOnly: false
 ---
 apiVersion: v1
 kind: Service
@@ -254,9 +256,9 @@ metadata:
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  annotations:
-    description: Storage Class Database
-  name: scmysql
-provisioner: kubernetes.io/no-provisioner
-reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
+    name: scmysql
+    provisioner: k8s.gcr.io/sig-storage/nfs-subdir-external-provisioner
+    parameters:
+      server: 10.0.48.251
+      path: /vol_NA_PDR_K8s_WAP/mysql
+      readOnly: false
