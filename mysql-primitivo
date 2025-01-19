@@ -94,9 +94,7 @@ spec:
                 secretKeyRef:
                   name: mysql-secrets
                   key: mysql-password
-          args:
-            - "--default-authentication-plugin=mysql_native_password"
-            - "--provisioner=kmaster.senasa.gob.ar/nfs"
+
           imagePullPolicy: "IfNotPresent"
           volumeMounts:
             - name:  export-volume
